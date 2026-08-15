@@ -1,6 +1,5 @@
-﻿import os
+import os
 from pathlib import Path
-
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -22,7 +21,11 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    PROJECT_NAME: str = "brokerage-chatbot"
+    # App Settings
+    PROJECT_NAME: str = "mortgage-underwriting-api"
+
+    # LLM Provider Configuration
+    # Supports "openai", "anthropic", etc.
     GROQ_LLM_PROVIDER: str = Field(default="groq")
     GROQ_LLM_MODEL: str = Field(default="llama-3.1-8b-instant")
     GROQ_LLM_TEMPERATURE: float = Field(default=0.0)
@@ -30,6 +33,7 @@ class Settings(BaseSettings):
     OPENAI_LLM_MODEL: str = Field(default="gpt-4o-mini")
     OPENAI_LLM_TEMPERATURE: float = Field(default=0.0)
 
+    # API Keys
     GROQ_API_KEY: str | None = None
     ANTHROPIC_API_KEY: str | None = None
     OPENAI_API_KEY: str | None = None
@@ -42,6 +46,7 @@ class Settings(BaseSettings):
     CHUNK_OVERLAP: int = 200
 
 
+# Global settings instance
 settings = Settings()
 
 
