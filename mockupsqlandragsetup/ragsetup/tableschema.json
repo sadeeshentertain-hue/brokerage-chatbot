@@ -1,0 +1,390 @@
+[
+  {
+    "id": "tbl_vendor",
+    "text_to_embed": "Table: vendor. Description: Profile data for warehouse suppliers and vendors. Contains agreement codes, supplier profiles, and locations. Common keywords: vendor name, supplier state, country, big or small vendor type, creation date, agreement number.",
+    "metadata": {
+      "table_name": "vendor",
+      "primary_key": [
+        "vendor_agreement_number"
+      ],
+      "foreign_keys": [],
+      "columns": [
+        {
+          "name": "vendor_agreement_number",
+          "type": "VARCHAR(50)",
+          "description": "Primary agreement identifier for the vendor contract."
+        },
+        {
+          "name": "vendor_number",
+          "type": "VARCHAR(50)",
+          "description": "Internal business identifier for the vendor entity."
+        },
+        {
+          "name": "agreement_create_date",
+          "type": "DATE",
+          "description": "The date when the vendor agreement record was initialized."
+        },
+        {
+          "name": "vendor_name",
+          "type": "VARCHAR(255)",
+          "description": "Legal business trading name of the vendor company."
+        },
+        {
+          "name": "vendor_addr_country",
+          "type": "VARCHAR(100)",
+          "description": "The country where the vendor headquarters are located."
+        },
+        {
+          "name": "vendor_addr_state",
+          "type": "VARCHAR(100)",
+          "description": "The operational state or region code for the vendor address."
+        },
+        {
+          "name": "vendor_type",
+          "type": "VARCHAR(10)",
+          "description": "Size category grouping. Restricted values: 'big' or 'small'."
+        },
+        {
+          "name": "update_timestamp",
+          "type": "TIMESTAMP",
+          "description": "Audit record tracking when this vendor line was last modified."
+        },
+        {
+          "name": "update_userid",
+          "type": "VARCHAR(100)",
+          "description": "The user credentials identifier of the person updating the row."
+        }
+      ]
+    }
+  },
+  {
+    "id": "tbl_agreement",
+    "text_to_embed": "Table: agreement. Description: Tracks formal warehouse logistics contract lifecycles, operational states, and active timelines. Common keywords: contract type, status, effective date, expiration date, number of active items, agreement profile.",
+    "metadata": {
+      "table_name": "agreement",
+      "primary_key": [
+        "vendor_agreement_number",
+        "agreement_type"
+      ],
+      "foreign_keys": [
+        {
+          "column": [
+            "vendor_agreement_number"
+          ],
+          "references_table": "vendor",
+          "references_column": [
+            "vendor_agreement_number"
+          ]
+        }
+      ],
+      "columns": [
+        {
+          "name": "vendor_agreement_number",
+          "type": "VARCHAR(50)",
+          "description": "Foreign key reference linking directly to the parent vendor profile."
+        },
+        {
+          "name": "agreement_type",
+          "type": "VARCHAR(50)",
+          "description": "Part of the primary key. Categorizes the nature of the operational agreement."
+        },
+        {
+          "name": "agreement_status",
+          "type": "VARCHAR(30)",
+          "description": "Current lifecycle status phase of the contract (e.g., Active, Suspended)."
+        },
+        {
+          "name": "agreement_eff_date",
+          "type": "DATE",
+          "description": "The activation or effective start date of the legal agreement parameters."
+        },
+        {
+          "name": "agreement_exp_date",
+          "type": "DATE",
+          "description": "The absolute expiration boundary date for the agreement framework."
+        },
+        {
+          "name": "number_of_items",
+          "type": "INT",
+          "description": "The total volume quantity cap of product stock items registered under this text block."
+        },
+        {
+          "name": "last_updated_by",
+          "type": "VARCHAR(100)",
+          "description": "System operator user signature mapping who last processed changes."
+        },
+        {
+          "name": "update_timestamp",
+          "type": "TIMESTAMP",
+          "description": "System tracking clock recording the timing of modification writes."
+        }
+      ]
+    }
+  },
+  {
+    "id": "tbl_purchase_details",
+    "text_to_embed": "Table: purchase_details. Description: Logs discrete purchase transaction metadata, batch invoicing records, and tracking metrics. Common keywords: purchase id, order type, transaction date, last update date, items count per invoice batch.",
+    "metadata": {
+      "table_name": "purchase_details",
+      "primary_key": [
+        "vendor_agreement_number",
+        "purchase_id",
+        "purchase_type",
+        "purchase_date"
+      ],
+      "foreign_keys": [
+        {
+          "column": [
+            "vendor_agreement_number"
+          ],
+          "references_table": "vendor",
+          "references_column": [
+            "vendor_agreement_number"
+          ]
+        }
+      ],
+      "columns": [
+        {
+          "name": "vendor_agreement_number",
+          "type": "VARCHAR(50)",
+          "description": "Link key referencing the associated master vendor contract account."
+        },
+        {
+          "name": "purchase_id",
+          "type": "VARCHAR(50)",
+          "description": "Unique purchase transaction tracking identifier instance."
+        },
+        {
+          "name": "purchase_type",
+          "type": "VARCHAR(50)",
+          "description": "The operational type indicator classification assigned to this purchase event."
+        },
+        {
+          "name": "purchase_date",
+          "type": "DATE",
+          "description": "The baseline execution tracking date when the transaction record occurred."
+        },
+        {
+          "name": "purchase_update_date",
+          "type": "DATE",
+          "description": "The historical tracking marker logging follow-up transaction adjustments."
+        },
+        {
+          "name": "number_of_items",
+          "type": "INT",
+          "description": "The net operational product quantity count bundled into this purchase transaction entry."
+        },
+        {
+          "name": "last_updated_by",
+          "type": "VARCHAR(100)",
+          "description": "Audit system identity trace mapping who saved the invoice line updates."
+        },
+        {
+          "name": "update_timestamp",
+          "type": "TIMESTAMP",
+          "description": "Database system clock monitoring specific modification entry instances."
+        }
+      ]
+    }
+  },
+  {
+    "id": "tbl_item_receiving_details",
+    "text_to_embed": "Table: item_receiving_details. Description: Stores physical product unit counts, costs, and premium brokerage parameters. Common keywords: item number, sku cost, units ordered, products received at dock, brokerage percentage rate, total accumulated brokerage cost.",
+    "metadata": {
+      "table_name": "item_receiving_details",
+      "primary_key": [
+        "vendor_agreement_number",
+        "purchase_id",
+        "purchase_type",
+        "item_number",
+        "item_cost"
+      ],
+      "foreign_keys": [
+        {
+          "column": [
+            "vendor_agreement_number",
+            "purchase_id",
+            "purchase_type",
+            "purchase_date"
+          ],
+          "references_table": "purchase_details",
+          "references_column": [
+            "vendor_agreement_number",
+            "purchase_id",
+            "purchase_type",
+            "purchase_date"
+          ]
+        }
+      ],
+      "columns": [
+        {
+          "name": "vendor_agreement_number",
+          "type": "VARCHAR(50)",
+          "description": "Composite structural key tracking relationship constraints back to vendor contexts."
+        },
+        {
+          "name": "purchase_id",
+          "type": "VARCHAR(50)",
+          "description": "Transactional trace key tracking back into parent purchase entities."
+        },
+        {
+          "name": "purchase_type",
+          "type": "VARCHAR(50)",
+          "description": "Classification descriptor tracking operational categories from transactions."
+        },
+        {
+          "name": "purchase_date",
+          "type": "DATE",
+          "description": "Temporal relationship anchor constraint explicitly required to link to purchase details records."
+        },
+        {
+          "name": "item_number",
+          "type": "VARCHAR(50)",
+          "description": "The core inventory stock item identifier or unique physical product SKU field string."
+        },
+        {
+          "name": "item_cost",
+          "type": "NUMERIC(15,4)",
+          "description": "High-precision financial variable defining standard production cost per item entity asset."
+        },
+        {
+          "name": "item_ordered",
+          "type": "INT",
+          "description": "The target quantity count expected from initial supplier invoicing steps."
+        },
+        {
+          "name": "item_received",
+          "type": "INT",
+          "description": "The real quantitative unit validation tally physically delivered into warehouse docks."
+        },
+        {
+          "name": "item_sold",
+          "type": "INT",
+          "description": "Outbound tracking matrix calculating structural departures out to destination store outlets."
+        },
+        {
+          "name": "item_brokerage_percentage",
+          "type": "NUMERIC(5,2)",
+          "description": "The operational premium tier configuration variable used to run storage fee calculations."
+        },
+        {
+          "name": "item_brokerage_cost",
+          "type": "NUMERIC(15,4)",
+          "description": "The ultimate computed dollar amount fee applied directly to this inventory record entry line."
+        },
+        {
+          "name": "last_update_by",
+          "type": "VARCHAR(100)",
+          "description": "Administrative credential trace string documenting who changed storage parameters."
+        },
+        {
+          "name": "update_timestamp",
+          "type": "TIMESTAMP",
+          "description": "Chronological audit verification stamp confirming execution runtimes."
+        }
+      ]
+    }
+  },
+  {
+    "id": "tbl_receiving_history",
+    "text_to_embed": "Table: receiving_history. Description: Historical snapshot archive tracking time-series stock processing loops and sequential activity records over time. Common keywords: historical logs, activity date, item timeline tracking, sequence duplicates index, past brokerage metrics.",
+    "metadata": {
+      "table_name": "receiving_history",
+      "primary_key": [
+        "vendor_agreement_number",
+        "purchase_id",
+        "purchase_type",
+        "item_number",
+        "item_cost",
+        "activity_date",
+        "sequence"
+      ],
+      "foreign_keys": [
+        {
+          "column": [
+            "vendor_agreement_number",
+            "purchase_id",
+            "purchase_type",
+            "item_number",
+            "item_cost"
+          ],
+          "references_table": "item_receiving_details",
+          "references_column": [
+            "vendor_agreement_number",
+            "purchase_id",
+            "purchase_type",
+            "item_number",
+            "item_cost"
+          ]
+        }
+      ],
+      "columns": [
+        {
+          "name": "vendor_agreement_number",
+          "type": "VARCHAR(50)",
+          "description": "Backward-linked trace key verifying parent relationship profiles."
+        },
+        {
+          "name": "purchase_id",
+          "type": "VARCHAR(50)",
+          "description": "Acquisition sequence link connecting backward to item inventory tables."
+        },
+        {
+          "name": "purchase_type",
+          "type": "VARCHAR(50)",
+          "description": "Validation profile mapping specific types across multi-table history logs."
+        },
+        {
+          "name": "item_number",
+          "type": "VARCHAR(50)",
+          "description": "The physical stock tracking item SKU string archived within history entries."
+        },
+        {
+          "name": "item_cost",
+          "type": "NUMERIC(15,4)",
+          "description": "Archived high-precision snapshot value of item cost metrics at calculation time."
+        },
+        {
+          "name": "activity_date",
+          "type": "DATE",
+          "description": "The definitive chronological calendar processing date marking when this trace log snippet row occurred."
+        },
+        {
+          "name": "sequence",
+          "type": "INT",
+          "description": "Incremental integer index tracking system state duplicates when multiple actions happen on one day."
+        },
+        {
+          "name": "item_ordered",
+          "type": "INT",
+          "description": "Historical snapshot of original order target totals."
+        },
+        {
+          "name": "item_received",
+          "type": "INT",
+          "description": "Historical snapshot of actual received totals at that point in time."
+        },
+        {
+          "name": "item_sold",
+          "type": "INT",
+          "description": "Historical snapshot of structural distribution outputs sent to store locations."
+        },
+        {
+          "name": "brokerage_cost",
+          "type": "NUMERIC(15,4)",
+          "description": "Historical log entry tracking past calculated brokerage liabilities."
+        },
+        {
+          "name": "last_update_by",
+          "type": "VARCHAR(100)",
+          "description": "System trace string registering who committed this history snapshot record layer."
+        },
+        {
+          "name": "update_timestamp",
+          "type": "TIMESTAMP",
+          "description": "Standard infrastructure audit trailing tracking precise row creation timing metrics."
+        }
+      ]
+    }
+  }
+]
