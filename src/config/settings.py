@@ -38,6 +38,7 @@ class Settings(BaseSettings):
     ANTHROPIC_API_KEY: str | None = None
     OPENAI_API_KEY: str | None = None
     OPENAI_API_BASE: str | None = None
+    OPENAI_EMBEDDING_MODEL: str = Field(default="text-embedding-3-small")
     TAVILY_API_KEY: str | None = None
     CHROMA_DB_PATH: str | None = None
     PDF_PATH: str | None = None

@@ -6,9 +6,23 @@ from urllib.request import urlopen
 
 from fastapi import APIRouter, HTTPException, status
 
+from mockup_sql_ragsetup.ragsetup.dataingestionandload import convertschemattodocument, load_table_schema
+
 logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/brokeragent", tags=["Chat & Agents"])
+
+def normalize_json_url(file_url: str) -> str:
+    """Convert GitHub browser URLs to raw JSON URLs so they return file content."""
+    parsed = urlparse(file_url)
+    if parsed.netloc.lower() == "github.com" and "/blob/" in parsed.path:
+        path_parts = parsed.path.strip("/").split("/")
+        if len(path_parts) >= 4:
+            owner, repo, _, branch, *rest = path_parts
+            if branch and rest:
+                raw_path = "/".join([owner, repo, branch, *rest])
+                return f"https://raw.githubusercontent.com/{raw_path}"
+    return file_url
 
 
 @router.post("/ragload", summary="Load table schema documents for RAG processing")
@@ -21,7 +35,7 @@ async def stream_chat_response(url: str):
                 detail={"errors": ["URL is required."]},
             )
 
-        file_url = str(url).strip()
+        file_url = normalize_json_url(str(url).strip())
         parsed = urlparse(file_url)
 
         if not parsed.scheme or not parsed.netloc:
@@ -45,14 +59,17 @@ async def stream_chat_response(url: str):
                         detail={"errors": [f"JSON file is empty: {file_url}"]},
                     )
 
-                json.loads(content.decode("utf-8"))
+                data = json.loads(content.decode("utf-8"))
         except (HTTPError, URLError, ValueError, UnicodeDecodeError) as exc:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail={"errors": [f"JSON file not found or invalid: {file_url}"]},
             ) from exc
+        print(f"Loaded JSON data from {file_url}: {data}")
+        table_documents = convertschemattodocument(data)
+        len_doc = load_table_schema(table_documents)
 
-        return {"message": "Table schema documents loaded successfully."}
+        return {"message": "Table schema documents loaded successfully.", "loaded_documents": len_doc}
     except HTTPException:
         raise
     except Exception as exc:
