@@ -10,6 +10,25 @@ from src.config.settings import settings
 logger = logging.getLogger(__name__)
 
 
+def _sanitize_chroma_metadata(metadata: dict[str, Any]) -> dict[str, Any]:
+    """Chroma accepts only scalar metadata values; strip list/dict values to keep the schema documents valid."""
+    safe_metadata: dict[str, Any] = {}
+    for key, value in metadata.items():
+        if key in {"columns", "primary_key", "foreign_keys", "metadata"}:
+            continue
+        if value is None or value == "":
+            continue
+        if isinstance(value, (list, tuple, set)):
+            if not value:
+                continue
+            safe_metadata[key] = ", ".join(str(item) for item in value)
+        elif isinstance(value, (str, int, float, bool)):
+            safe_metadata[key] = value
+        else:
+            safe_metadata[key] = str(value)
+    return safe_metadata
+
+
 def create_schema_store(documents: Any):
     """Create vector store with database schema information.
 
@@ -23,7 +42,7 @@ def create_schema_store(documents: Any):
             openai_api_key=settings.OPENAI_API_KEY,
         )
 
-        persist_directory = settings.CHROMA_DB_PATH or "./chroma_db"
+        persist_directory = settings.CHROMA_DB_PATH
         vectorstore = Chroma.from_documents(
             documents,
             embedding=embeddings,
@@ -49,45 +68,101 @@ def load_table_schema(documents: Any):
     return len(vectorstore)
 
 def convertschemattodocument(schema_data: Any):
-    # Ensure the root element is iterable as a list of tables
+    """Normalize schema JSON into LangChain Documents.
+
+    The JSON can arrive in a few shapes:
+    - a list of table objects
+    - a dict with a "tables" key
+    - a dict with a "data" key containing table objects
+    - a single table object with nested "metadata" information
+    """
     if isinstance(schema_data, dict):
-        # If the JSON wraps tables in a key like "tables": [...]
-        if "tables" in schema_data:
+        if "tables" in schema_data and isinstance(schema_data["tables"], list):
             schema_data = schema_data["tables"]
+        elif "data" in schema_data and isinstance(schema_data["data"], list):
+            schema_data = schema_data["data"]
         else:
             schema_data = [schema_data]
+
     table_documents = []
-    # 2. Map exactly 1 table to 1 Document object
     for table in schema_data:
-        table_name = table.get("name") or table.get("table_name", "unknown_table")
-        description = table.get("description", "No description provided.")
-        # Generate a clean, descriptive text block for the entire table
+        if not isinstance(table, dict):
+            continue
+
+        metadata = table.get("metadata") if isinstance(table.get("metadata"), dict) else {}
+
+        table_name = (
+            metadata.get("table_name")
+            or table.get("table_name")
+            or table.get("name")
+            or table.get("tableName")
+            or table.get("id", "unknown_table")
+        )
+        description = (
+            metadata.get("description")
+            or table.get("description")
+            or "No description provided."
+        )
+        columns = metadata.get("columns") if isinstance(metadata.get("columns"), list) else table.get("columns", [])
+
         text_representation = f"Table Name: {table_name}\nDescription: {description}\nColumns:\n"
-    
-        for col in table.get("columns", []):
-            col_name = col.get("name")
+
+        primary_keys = set(metadata.get("primary_key", []) or [])
+        foreign_keys = metadata.get("foreign_keys", []) or []
+
+        for col in columns:
+            if not isinstance(col, dict):
+                continue
+
+            col_name = col.get("name") or col.get("column_name") or "unknown_column"
             col_type = col.get("type", "UNKNOWN")
             col_desc = col.get("description", "")
-        
+
             line = f"  - {col_name} ({col_type})"
-            if col.get("primary_key") or col.get("is_primary"):
+            if col.get("primary_key") or col.get("is_primary") or col_name in primary_keys:
                 line += " [PRIMARY KEY]"
+
             if col.get("foreign_key") or col.get("is_foreign"):
-                line += f" [FOREIGN KEY references {col.get('references', 'other_table')}]"
+                references = col.get("references") or col.get("references_table") or "other_table"
+                line += f" [FOREIGN KEY references {references}]"
+            elif any(
+                isinstance(fk, dict)
+                and (
+                    (col_name in (fk.get("column") or []))
+                    or (col_name in (fk.get("columns") or []))
+                )
+                for fk in foreign_keys
+            ):
+                fk_ref = next(
+                    (
+                        fk.get("references_table")
+                        for fk in foreign_keys
+                        if isinstance(fk, dict)
+                        and (
+                            (col_name in (fk.get("column") or []))
+                            or (col_name in (fk.get("columns") or []))
+                        )
+                    ),
+                    "other_table",
+                )
+                line += f" [FOREIGN KEY references {fk_ref}]"
+
             if col_desc:
                 line += f" : {col_desc}"
-            
+
             text_representation += line + "\n"
-    
-        # Store critical tracking attributes in flat metadata
-        metadata = {
+
+        metadata_doc = {
             "table_name": table_name,
-            "type": "database_schema"
+            "type": "database_schema",
+            "description": description,
         }
-    
-        # Create the single Document container for this specific table
-        doc = Document(page_content=text_representation, metadata=metadata)
+        if isinstance(metadata, dict):
+            metadata_doc.update(_sanitize_chroma_metadata(metadata))
+
+        doc = Document(page_content=text_representation, metadata=metadata_doc)
         table_documents.append(doc)
 
     print(f"Generated {len(table_documents)} complete table documents (Zero Chunking Applied).")
+    print(table_documents)
     return table_documents

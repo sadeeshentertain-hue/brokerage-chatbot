@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     )
 
     # App Settings
-    PROJECT_NAME: str = "mortgage-underwriting-api"
+    PROJECT_NAME: str = "brokerage-chatbot-api"
 
     # LLM Provider Configuration
     # Supports "openai", "anthropic", etc.

@@ -5,6 +5,10 @@ from urllib.parse import urlparse
 from urllib.request import urlopen
 
 from fastapi import APIRouter, HTTPException, status
+from langchain_core.messages import HumanMessage
+from src.graph.chatbot_graph import create_and_compile_workflow
+from src.graph.state.agentstate import AgentState
+from src.utils.sanitize_data import sanitize_all_input
 
 from mockup_sql_ragsetup.ragsetup.dataingestionandload import convertschemattodocument, load_table_schema
 
@@ -78,3 +82,36 @@ async def stream_chat_response(url: str):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail={"errors": [f"Document loading failed: {str(exc)}"]},
         ) from exc
+
+@router.post("/broker-chat", summary="Chat with the broker agent")
+async def broker_chat_response(query: str):
+    """broker agent chat endpoint."""
+    sanitize_data = sanitize_all_input(query)
+    sql_query = ""
+    app = create_and_compile_workflow()
+
+    config = {"configurable": {"thread_id": "session_unique_id_123"}}
+
+    # 2. Structure your incoming state data
+    # Match the key name to your State definition (usually "messages")
+    graph_input = {
+        "messages": [
+            HumanMessage(content="Hello! Can you share the list of vendors and their agreements?"),
+       ]
+    }
+
+    state:AgentState = AgentState(
+        user_query=sanitize_data,
+    )
+
+
+    # 3. Invoke the graph synchronously
+    output_state = app.invoke(state)
+
+    return f"graph created: {output_state}"
+
+    # sql_query = generate_sql_from_question(sanitize_data)  # Call the RAG SQL generation function
+    # results = run_sqlite_query(sql_query)  # Execute the generated SQL query against the SQLite database
+    # formatted_response = generate_llm_response(sanitize_data, results)  # Format the LLM response
+    # return {"response": formatted_response, "sql_query": sql_query,"DB_results": results,
+    #         "formatted_response": formatted_response}
