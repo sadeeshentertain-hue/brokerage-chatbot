@@ -88,12 +88,17 @@ async def stream_chat_response(url: str):
 async def broker_chat_response(query: str):
     """broker agent chat endpoint."""
     sanitize_data = sanitize_all_input(query)
-    state: AgentState = {"user_query": sanitize_data}
     config = {"configurable": {"thread_id": "user_session_abc999"}}
-    output_state = app.invoke(state, config=config)
 
-    updated_history = list(state.get("chat_history", []))
-    updated_history.append({"role": "user", "content": state.get("user_query", "")})
-    updated_history.append({"role": "assistant", "content": output_state.get("final_output", "")})
-    print(f"Updated chat history: {updated_history}")
+    prior_state = app.get_state(config)
+    prior_history = []
+    if prior_state and hasattr(prior_state, "values"):
+        prior_history = list(prior_state.values.get("chat_history", []))
+
+    state: AgentState = {
+        "user_query": sanitize_data,
+        "chat_history": prior_history,
+    }
+    output_state = app.invoke(state, config=config)
+    print(f"Updated chat history: {output_state.get('chat_history', [])}")
     return {"response": output_state.get("final_output", output_state)}

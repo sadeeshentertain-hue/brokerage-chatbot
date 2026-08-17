@@ -47,7 +47,19 @@ Please provide a clean, direct answer to the user based on the database results 
         )
 
         print(f"LLM response content: {response.content}")
-        return {"final_output": response.content}
+        updated_history = list(state.get("chat_history", []))
+        updated_history.append({"role": "user", "content": user_query})
+        updated_history.append({"role": "assistant", "content": response.content})
+        return {
+            "final_output": response.content,
+            "chat_history": updated_history,
+        }
 
     except Exception as e:
-        return {"final_output": f"🚨 Error generating LLM response: {e}"}
+        updated_history = list(state.get("chat_history", []))
+        updated_history.append({"role": "user", "content": user_query})
+        updated_history.append({"role": "assistant", "content": str(e)})
+        return {
+            "final_output": f"🚨 Error generating LLM response: {e}",
+            "chat_history": updated_history,
+        }
