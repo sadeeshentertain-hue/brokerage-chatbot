@@ -1,19 +1,19 @@
-from typing import Any
-
 from langchain_core.messages import HumanMessage, SystemMessage
 
 from src.config.settings import settings
 from src.languagemodels.llmprovider import get_llm_instance
 from src.graph.state.agentstate import AgentState
 
-def format_response(state:AgentState) -> AgentState:
+
+def format_response(state: AgentState) -> AgentState:
     """Uses an LLM to transform raw SQLite results into a natural, user-friendly response."""
-    user_query = state.user_query
-    dbresult = state.db_query_result
-    if(state.sql_error):
-        state.final_output = state.sql_error
-        return state
-    llm = get_llm_instance(settings.GROQ_LLM_PROVIDER)  # Use the configured LLM provider
+    user_query = state.get("user_query", "")
+    dbresult = state.get("db_query_result", [])
+
+    if state.get("sql_error"):
+        return {"final_output": state["sql_error"]}
+
+    llm = get_llm_instance(settings.GROQ_LLM_PROVIDER)
     system_instruction = (
         "You are a helpful data assistant. Your job is to format the provided data to the user's question "
         "using ONLY the provided database results. \n"
@@ -47,10 +47,7 @@ Please provide a clean, direct answer to the user based on the database results 
         )
 
         print(f"LLM response content: {response.content}")
-
-        state.final_output = response.content
-        return state
+        return {"final_output": response.content}
 
     except Exception as e:
-        state.final_output = f"🚨 Error generating LLM response: {e}"
-        return state
+        return {"final_output": f"🚨 Error generating LLM response: {e}"}

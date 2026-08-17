@@ -13,6 +13,7 @@ from src.utils.sanitize_data import sanitize_all_input
 from mockup_sql_ragsetup.ragsetup.dataingestionandload import convertschemattodocument, load_table_schema
 
 logger = logging.getLogger(__name__)
+app = create_and_compile_workflow()
 
 router = APIRouter(prefix="/brokeragent", tags=["Chat & Agents"])
 
@@ -87,31 +88,12 @@ async def stream_chat_response(url: str):
 async def broker_chat_response(query: str):
     """broker agent chat endpoint."""
     sanitize_data = sanitize_all_input(query)
-    sql_query = ""
-    app = create_and_compile_workflow()
+    state: AgentState = {"user_query": sanitize_data}
+    config = {"configurable": {"thread_id": "user_session_abc999"}}
+    output_state = app.invoke(state, config=config)
 
-    config = {"configurable": {"thread_id": "session_unique_id_123"}}
-
-    # 2. Structure your incoming state data
-    # Match the key name to your State definition (usually "messages")
-    graph_input = {
-        "messages": [
-            HumanMessage(content="Hello! Can you share the list of vendors and their agreements?"),
-       ]
-    }
-
-    state:AgentState = AgentState(
-        user_query=sanitize_data,
-    )
-
-
-    # 3. Invoke the graph synchronously
-    output_state = app.invoke(state)
-
-    return f"graph created: {output_state}"
-
-    # sql_query = generate_sql_from_question(sanitize_data)  # Call the RAG SQL generation function
-    # results = run_sqlite_query(sql_query)  # Execute the generated SQL query against the SQLite database
-    # formatted_response = generate_llm_response(sanitize_data, results)  # Format the LLM response
-    # return {"response": formatted_response, "sql_query": sql_query,"DB_results": results,
-    #         "formatted_response": formatted_response}
+    updated_history = list(state.get("chat_history", []))
+    updated_history.append({"role": "user", "content": state.get("user_query", "")})
+    updated_history.append({"role": "assistant", "content": output_state.get("final_output", "")})
+    print(f"Updated chat history: {updated_history}")
+    return {"response": output_state.get("final_output", output_state)}

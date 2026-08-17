@@ -1,15 +1,17 @@
+from typing import Annotated, TypedDict, List, Dict, Any
 
-from typing import List, Dict, Any, Literal
-from pydantic import BaseModel, Field
+from langgraph.graph import add_messages
 
-class AgentState(BaseModel):
+
+class AgentState(TypedDict, total=False):
     user_query: str
-    chat_history: List[Dict[str, str]] = Field(default_factory=list)
-    generated_sql: str = ""
-    db_columns: list = []
-    db_rows: list = []
-    db_schema: Dict[str, Any] = {} 
-    db_query_result: List = []
-    sql_error: str = ""
-    retry_count: int = 0
-    final_output: str = ""
+    chat_history: Annotated[List[Dict[str, str]], add_messages]
+    generated_sql: str
+    db_columns: list
+    db_rows: list
+    db_schema: str
+    db_query_result: List[Any]
+    sql_error: str
+    retry_count: int
+    final_output: str
+    messages: Annotated[list, add_messages]
